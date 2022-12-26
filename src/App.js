@@ -1,8 +1,19 @@
-import './App.css';
-import 'rsuite/dist/rsuite.min.css';
-import './styles/main.scss';
+import { Switch } from 'react-router-dom';
+import Signin from './Pages/Signin';
+import Home from './Pages/Home';
+import PrivateRoute from './components/PrivateRoute';
+
 function App() {
-  return <div className="App">hello</div>;
+  return (
+    <Switch>
+      <PrivateRoute path="/signin">
+        <Signin />
+      </PrivateRoute>
+      <PrivateRoute path="/">
+        <Home />
+      </PrivateRoute>
+    </Switch>
+  );
 }
 
 export default App;

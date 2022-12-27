@@ -1,5 +1,11 @@
 {
   "rules": {
+    "profiles": {
+      "$user_email": {
+        ".read": "$user_email==auth.email",
+        ".write": "$user_email==auth.email"
+      }
+    },
     ".read": false,
     ".write": false
   }

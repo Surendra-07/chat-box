@@ -2,15 +2,13 @@ import React from 'react';
 import { Alert, Button, Col, Container, Grid, Icon, Panel, Row } from 'rsuite';
 
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
 } from 'firebase/auth';
-import { app, database } from '../misc/firebase';
+import { auth, database } from '../misc/firebase';
 import { ref, set } from 'firebase/database';
 
-const auth = getAuth(app);
 const Signin = () => {
   const SignInProvider = (auth, provider) => {
     try {

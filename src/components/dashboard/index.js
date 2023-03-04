@@ -1,12 +1,18 @@
+import { ref, update } from 'firebase/database';
 import React from 'react';
 import { Button, Divider, Drawer } from 'rsuite';
 import { useProfile } from '../../context/profile.context';
 import EditableInput from '../EditableInput';
-
+import { database } from '../../misc/firebase';
 const Dashboard = ({ onSignOut }) => {
   const { profile } = useProfile();
-
-  const onSave = () => {};
+  const onSave = async newData => {
+    if (newData !== '') {
+      update(ref(database, `/profiles/${profile.uid}`), {
+        username: newData,
+      });
+    }
+  };
 
   return (
     <>

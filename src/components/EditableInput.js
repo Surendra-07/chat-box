@@ -1,8 +1,13 @@
-import { async } from '@firebase/util';
 import React, { useCallback, useState } from 'react';
 import { Alert, Icon, Input, InputGroup } from 'rsuite';
 
-const EditableInput = ({ initialvalue, placeholder, label, ...inputProps }) => {
+const EditableInput = ({
+  initialvalue,
+  onSave,
+  placeholder,
+  label,
+  ...inputProps
+}) => {
   const [input, setInput] = useState(initialvalue);
   const [isEditable, setIsEditable] = useState(false);
   const onInputChange = useCallback(value => {
@@ -13,10 +18,6 @@ const EditableInput = ({ initialvalue, placeholder, label, ...inputProps }) => {
     setIsEditable(p => !p);
     setInput(initialvalue);
   }, [initialvalue]);
-
-  const onSave = async newData => {
-    console.log(newData);
-  };
 
   const onSaveClick = () => {
     const trimmed = input.trim();

@@ -11,6 +11,7 @@ import { useProfile } from '../../context/profile.context';
 import { getDownloadURL, ref } from 'firebase/storage';
 import { uploadBytes } from 'firebase/storage';
 import { ref as sref, set, update } from 'firebase/database';
+import ProfileAvatar from '../ProfileAvatar';
 const AvatarUploadBtn = () => {
   const acceptedFilesTypes = ['image/png', 'image/jpeg', 'image/pjpeg'];
   const isValidFile = file => acceptedFilesTypes.includes(file.type);
@@ -78,6 +79,11 @@ const AvatarUploadBtn = () => {
 
   return (
     <div className="mt-3 text-center">
+      <ProfileAvatar
+        src={profile.avatar}
+        name={profile.username}
+        className="width-200 height-200 img-fullsize font-huge"
+      />
       <div>
         <label
           htmlFor="avatar-upload"

@@ -20,6 +20,7 @@ const Signin = () => {
           username: user.displayName,
           email: user.email,
           createdAt: user.metadata.creationTime,
+          avatar: null,
         });
       });
     } catch (err) {

@@ -4,6 +4,8 @@ import Home from './Pages/Home';
 import 'rsuite/dist/styles/rsuite-default.css';
 import PrivateRoute from './components/PrivateRoute';
 import './styles/main.scss';
+import './styles/override.scss';
+import './styles/utility.scss';
 import { ProfileProvider } from './context/profile.context';
 import PublicRoute from './components/PublicRoute';
 function App() {

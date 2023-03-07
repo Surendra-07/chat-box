@@ -62,11 +62,10 @@ const AvatarUploadBtn = () => {
         getDownloadURL(storageref).then(url => {
           setUrl(url);
           console.log(url);
+          update(sref(database, `/profiles/${profile.uid}`), {
+            avatar: url,
+          });
         });
-      });
-
-      update(sref(database, `/profiles/${profile.uid}`), {
-        avatar: url,
       });
 
       setLoading(false);

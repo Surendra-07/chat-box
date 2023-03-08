@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button, ButtonToolbar, Icon } from 'rsuite';
 import { useCurrentRoom } from '../../../context/current.room.context';
 import { useMediaQuery } from '../../../misc/custom-hooks';
+import RoomInfoBtnModal from './RoomInfoBtnModal';
 
 const ChatTop = () => {
   const name = useCurrentRoom(v => v.name);
@@ -10,7 +11,7 @@ const ChatTop = () => {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center">
-        <h4>
+        <h4 className="text-disappear d-flex align-items-center">
           <Icon
             componentClass={Link}
             to="/"
@@ -28,6 +29,7 @@ const ChatTop = () => {
       </div>
       <div className="d-flex justify-content-between align-items-center">
         <span>todo</span>
+        <RoomInfoBtnModal />
       </div>
     </div>
   );

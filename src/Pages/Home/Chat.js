@@ -20,10 +20,10 @@ const Chat = () => {
     return <h6 className="text-center mt-page">Chat {chatId} not found</h6>;
   }
 
-  const { name, decription } = currentRoom;
+  const { name, description } = currentRoom;
   const currentRoomData = {
     name,
-    decription,
+    description,
   };
   return (
     <CurrentRoomProvider data={currentRoomData}>

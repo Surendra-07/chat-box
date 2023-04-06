@@ -10,7 +10,7 @@ import { database, storage } from '../../misc/firebase';
 import { useProfile } from '../../context/profile.context';
 import { getDownloadURL, ref } from 'firebase/storage';
 import { uploadBytes } from 'firebase/storage';
-import { ref as sref, set, update } from 'firebase/database';
+import { onValue, ref as sref, set, update } from 'firebase/database';
 import ProfileAvatar from '../ProfileAvatar';
 const AvatarUploadBtn = () => {
   const acceptedFilesTypes = ['image/png', 'image/jpeg', 'image/pjpeg'];
@@ -64,6 +64,28 @@ const AvatarUploadBtn = () => {
           console.log(url);
           update(sref(database, `/profiles/${profile.uid}`), {
             avatar: url,
+          });
+          const dref = ref(database, '/messages');
+          onValue(dref, snap => {
+            snap.forEach(msgSnap => {
+              const d = ref(database, `/messages/${msgSnap.key}/author`);
+              update(d, {
+                avatar: url,
+              });
+            });
+          });
+
+          const drf = ref(database, '/rooms');
+          onValue(drf, snap => {
+            snap.forEach(msgSnap => {
+              const d = ref(
+                database,
+                `/rooms/${msgSnap.key}/lastMessage/author`
+              );
+              update(d, {
+                avatar: url,
+              });
+            });
           });
         });
       });

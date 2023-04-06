@@ -1,4 +1,4 @@
-import { ref, update } from 'firebase/database';
+import { equalTo, onValue, query, ref, update } from 'firebase/database';
 import React from 'react';
 import { Alert, Button, Divider, Drawer } from 'rsuite';
 import { useProfile } from '../../context/profile.context';
@@ -9,11 +9,37 @@ import AvatarUploadBtn from './AvatarUploadBtn';
 const Dashboard = ({ onSignOut }) => {
   const { profile } = useProfile();
   const onSave = async newData => {
-    if (newData !== '') {
-      update(ref(database, `/profiles/${profile.uid}`), {
-        username: newData,
-      });
-      Alert.info('User name has been updated', 4000);
+    const userNickNameRef = ref(database, `/profiles/${profile.uid}`);
+    try {
+      if (newData !== '') {
+        update(userNickNameRef, {
+          username: newData,
+        });
+
+        const dref = query(ref(database, '/messages'));
+        onValue(dref, snap => {
+          snap.forEach(msgSnap => {
+            const d = ref(database, `/messages/${msgSnap.key}/author`);
+            update(d, {
+              name: newData,
+            });
+          });
+        });
+
+        const drf = query(ref(database, '/rooms'));
+        onValue(drf, snap => {
+          snap.forEach(msgSnap => {
+            const d = ref(database, `/rooms/${msgSnap.key}/lastMessage/author`);
+            update(d, {
+              name: newData,
+            });
+          });
+        });
+
+        Alert.info('User name has been updated', 4000);
+      }
+    } catch (err) {
+      Alert.error(err.message, 4000);
     }
   };
 

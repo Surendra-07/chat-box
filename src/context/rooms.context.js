@@ -14,9 +14,8 @@ export const RoomsProvider = ({ children }) => {
   useEffect(() => {
     const roomListRef = ref(database, 'rooms');
     onValue(roomListRef, snap => {
-      console.log(snap.val());
       const data = transformToArrWithId(snap.val());
-      console.log(data);
+
       setRooms(data);
     });
     return () => {

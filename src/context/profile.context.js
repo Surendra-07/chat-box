@@ -1,6 +1,17 @@
-import { off, onValue, ref } from 'firebase/database';
+import { off, onDisconnect, onValue, query, ref, set } from 'firebase/database';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, database } from '../misc/firebase';
+
+const d = new Date();
+const isOfflineForDatabase = {
+  state: 'offline',
+  last_changed: d,
+};
+
+const isOnlineForDatabase = {
+  state: 'online',
+  last_changed: d,
+};
 
 const ProfileContext = createContext();
 
@@ -10,8 +21,11 @@ export const ProfileProvider = ({ children }) => {
 
   useEffect(() => {
     let userRef;
+    let userStatusRef;
     const authUnsub = auth.onAuthStateChanged(authObj => {
       if (authObj) {
+        userStatusRef = ref(database, `/status/${authObj.uid}`);
+
         userRef = ref(database, `/profiles/${authObj.uid}`);
         onValue(userRef, snap => {
           const { username, createdAt, avatar } = snap.val();
@@ -29,14 +43,35 @@ export const ProfileProvider = ({ children }) => {
         if (userRef) {
           off(userRef);
         }
+        if (userStatusRef) {
+          off(userStatusRef);
+        }
         setProfile(null);
         setIsLoading(false);
       }
     });
+    //
+
+    onValue(userStatusRef, snap => {
+      if (snap.val() === false) {
+        return;
+      }
+      query(
+        userStatusRef,
+        onDisconnect,
+        set(isOfflineForDatabase).then(function () {
+          query(userStatusRef, set(isOnlineForDatabase));
+        })
+      );
+    });
+
     return () => {
       authUnsub();
       if (userRef) {
         off(userRef);
+      }
+      if (userStatusRef) {
+        off(userStatusRef);
       }
     };
   }, []);

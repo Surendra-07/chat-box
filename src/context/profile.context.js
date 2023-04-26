@@ -1,16 +1,24 @@
-import { off, onDisconnect, onValue, query, ref, set } from 'firebase/database';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import {
+  serverTimestamp,
+  ref,
+  onValue,
+  onDisconnect,
+  set,
+  off,
+} from 'firebase/database';
+
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, database } from '../misc/firebase';
 
-const d = new Date();
-const isOfflineForDatabase = {
+export const isOfflineForDatabase = {
   state: 'offline',
-  last_changed: d,
+  last_changed: serverTimestamp(),
 };
 
 const isOnlineForDatabase = {
   state: 'online',
-  last_changed: d,
+  last_changed: serverTimestamp(),
 };
 
 const ProfileContext = createContext();
@@ -22,59 +30,69 @@ export const ProfileProvider = ({ children }) => {
   useEffect(() => {
     let userRef;
     let userStatusRef;
-    const authUnsub = auth.onAuthStateChanged(authObj => {
+
+    const authUnsub = onAuthStateChanged(auth, async authObj => {
       if (authObj) {
         userStatusRef = ref(database, `/status/${authObj.uid}`);
-
         userRef = ref(database, `/profiles/${authObj.uid}`);
+
         onValue(userRef, snap => {
-          const { username, createdAt, avatar } = snap.val();
+          const { name, createdAt, avatar } = snap.val();
+
           const data = {
-            username,
+            name,
             createdAt,
             avatar,
             uid: authObj.uid,
             email: authObj.email,
           };
+
           setProfile(data);
           setIsLoading(false);
+        });
+
+        onValue(ref(database, '.info/connected'), snapshot => {
+          if (!!snapshot.val() === false) {
+            return;
+          }
+
+          onDisconnect(userStatusRef)
+            .set(isOfflineForDatabase)
+            .then(() => {
+              set(userStatusRef, isOnlineForDatabase);
+            });
         });
       } else {
         if (userRef) {
           off(userRef);
         }
+
         if (userStatusRef) {
           off(userStatusRef);
         }
+
+        off(ref(database, '.info/connected'));
+
         setProfile(null);
         setIsLoading(false);
       }
     });
-    //
-
-    onValue(userStatusRef, snap => {
-      if (snap.val() === false) {
-        return;
-      }
-      query(
-        userStatusRef,
-        onDisconnect,
-        set(isOfflineForDatabase).then(function () {
-          query(userStatusRef, set(isOnlineForDatabase));
-        })
-      );
-    });
 
     return () => {
       authUnsub();
+
+      off(ref(database, '.info/connected'));
+
       if (userRef) {
         off(userRef);
       }
+
       if (userStatusRef) {
         off(userStatusRef);
       }
     };
   }, []);
+
   return (
     <ProfileContext.Provider value={{ isLoading, profile }}>
       {children}

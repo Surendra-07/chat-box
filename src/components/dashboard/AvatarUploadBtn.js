@@ -1,100 +1,91 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import { Modal, Button, Alert } from 'rsuite';
 import AvatarEditor from 'react-avatar-editor';
-import { useState, useRef } from 'react';
-import { Alert, Button, Modal } from 'rsuite';
-import ModalBody from 'rsuite/lib/Modal/ModalBody';
-import ModalFooter from 'rsuite/lib/Modal/ModalFooter';
-import ModalHeader from 'rsuite/lib/Modal/ModalHeader';
+import {
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes,
+} from 'firebase/storage';
+import { ref as dbRef, update } from 'firebase/database';
 import { useModalState } from '../../misc/custom-hooks';
-import { database, storage } from '../../misc/firebase';
+import { storage, database } from '../../misc/firebase';
 import { useProfile } from '../../context/profile.context';
-import { getDownloadURL, ref } from 'firebase/storage';
-import { uploadBytes } from 'firebase/storage';
-import { onValue, ref as sref, set, update } from 'firebase/database';
 import ProfileAvatar from '../ProfileAvatar';
+import { getUserUpdates } from '../../misc/helpers';
+
+const fileInputTypes = '.png, .jpeg, .jpg';
+
+const acceptedFileTypes = ['image/png', 'image/jpeg', 'image/pjpeg'];
+const isValidFile = file => acceptedFileTypes.includes(file.type);
+
+const getBlob = canvas => {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('File process error'));
+      }
+    });
+  });
+};
+
 const AvatarUploadBtn = () => {
-  const acceptedFilesTypes = ['image/png', 'image/jpeg', 'image/pjpeg'];
-  const isValidFile = file => acceptedFilesTypes.includes(file.type);
   const { isOpen, open, close } = useModalState();
 
-  const [img, setImg] = useState(null);
-
-  const [url, setUrl] = useState(null);
-  const AvatarEditorRef = useRef();
   const { profile } = useProfile();
-  const [isLoading, setLoading] = useState(false);
-  const fileInputTypes = '.png, .jpeg, .jpg';
-
-  const getBlob = canvas => {
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(blob => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('File process Error'));
-        }
-      });
-    });
-  };
+  const [img, setImg] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const avatarEditorRef = useRef();
 
   const onFileInputChange = ev => {
     const currFiles = ev.target.files;
+
     if (currFiles.length === 1) {
       const file = currFiles[0];
+
       if (isValidFile(file)) {
         setImg(file);
+
         open();
       } else {
-        Alert.warning(`wrong file type ${file.type}`, 4000);
+        Alert.warning(`Wrong file type ${file.type}`, 4000);
       }
     }
   };
 
   const onUploadClick = async () => {
-    const canvas = AvatarEditorRef.current.getImageScaledToCanvas();
-    setLoading(true);
+    const canvas = avatarEditorRef.current.getImageScaledToCanvas();
+
+    setIsLoading(true);
     try {
       const blob = await getBlob(canvas);
 
-      const storageref = ref(storage, `/profile/${profile.uid}/avatar`);
+      const avatarFileRef = storageRef(
+        storage,
+        `/profile/${profile.uid}/avatar`
+      );
 
-      uploadBytes(storageref, blob).then(snapshot => {
-        getDownloadURL(storageref).then(url => {
-          setUrl(url);
-          console.log(url);
-          update(sref(database, `/profiles/${profile.uid}`), {
-            avatar: url,
-          });
-          const dref = ref(database, '/messages');
-          onValue(dref, snap => {
-            snap.forEach(msgSnap => {
-              const d = ref(database, `/messages/${msgSnap.key}/author`);
-              update(d, {
-                avatar: url,
-              });
-            });
-          });
-
-          const drf = ref(database, '/rooms');
-          onValue(drf, snap => {
-            snap.forEach(msgSnap => {
-              const d = ref(
-                database,
-                `/rooms/${msgSnap.key}/lastMessage/author`
-              );
-              update(d, {
-                avatar: url,
-              });
-            });
-          });
-        });
+      await uploadBytes(avatarFileRef, blob, {
+        cacheControl: `public, max-age=${3600 * 24 * 3}`,
       });
 
-      setLoading(false);
-      Alert.info('Avatar has been uploaded');
+      const downloadUrl = await getDownloadURL(avatarFileRef);
+
+      const updates = await getUserUpdates(
+        profile.uid,
+        'avatar',
+        downloadUrl,
+        database
+      );
+
+      await update(dbRef(database), updates);
+
+      setIsLoading(false);
+      Alert.info('Avatar has been uploaded', 4000);
     } catch (err) {
-      Alert.error(err.message, 9000);
-      setLoading(false);
+      setIsLoading(false);
+      Alert.error(err.message, 4000);
     }
   };
 
@@ -102,9 +93,10 @@ const AvatarUploadBtn = () => {
     <div className="mt-3 text-center">
       <ProfileAvatar
         src={profile.avatar}
-        name={profile.username}
+        name={profile.name}
         className="width-200 height-200 img-fullsize font-huge"
       />
+
       <div>
         <label
           htmlFor="avatar-upload"
@@ -119,16 +111,16 @@ const AvatarUploadBtn = () => {
             onChange={onFileInputChange}
           />
         </label>
+
         <Modal show={isOpen} onHide={close}>
-          <ModalHeader>
+          <Modal.Header>
             <Modal.Title>Adjust and upload new avatar</Modal.Title>
-          </ModalHeader>
-          <ModalBody>
-            <div className="d-flex justify-content-center align-item-center h-100">
-              {' '}
+          </Modal.Header>
+          <Modal.Body>
+            <div className="d-flex justify-content-center align-items-center h-100">
               {img && (
                 <AvatarEditor
-                  ref={AvatarEditorRef}
+                  ref={avatarEditorRef}
                   image={img}
                   width={200}
                   height={200}
@@ -138,12 +130,17 @@ const AvatarUploadBtn = () => {
                 />
               )}
             </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button block appearance="ghost" onClick={onUploadClick}>
-              uplaod new avatar
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              block
+              appearance="ghost"
+              onClick={onUploadClick}
+              disabled={isLoading}
+            >
+              Upload new avatar
             </Button>
-          </ModalFooter>
+          </Modal.Footer>
         </Modal>
       </div>
     </div>

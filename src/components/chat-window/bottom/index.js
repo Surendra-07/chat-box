@@ -1,31 +1,30 @@
-import { async } from '@firebase/util';
-import { push, ref, set, update } from 'firebase/database';
-import React from 'react';
-import { useCallback } from 'react';
-import { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { InputGroup, Input, Icon, Alert } from 'rsuite';
+import { serverTimestamp, ref, push, update } from 'firebase/database';
 import { useParams } from 'react-router';
-import { Alert, Icon, Input, InputGroup } from 'rsuite';
 import { useProfile } from '../../../context/profile.context';
 import { database } from '../../../misc/firebase';
-function assembleMessage(profile, chatId, input) {
-  const time = new Date();
+import AttachmentBtnModal from './AttachmentBtnModal';
+import AudioMsgBtn from './AudioMsgBtn';
+
+function assembleMessage(profile, chatId) {
   return {
     roomId: chatId,
-
     author: {
-      name: profile.username,
-      text: input,
+      name: profile.name,
       uid: profile.uid,
       createdAt: profile.createdAt,
       ...(profile.avatar ? { avatar: profile.avatar } : {}),
     },
-    createdAt: time,
+    createdAt: serverTimestamp(),
+    likeCount: 0,
   };
 }
 
-const ChatBottom = () => {
+const Bottom = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
   const { chatId } = useParams();
   const { profile } = useProfile();
 
@@ -38,22 +37,28 @@ const ChatBottom = () => {
       return;
     }
 
-    const datref = await ref(database, `messages/`);
+    const msgData = assembleMessage(profile, chatId);
+    msgData.text = input;
 
-    const messageId = push(datref, assembleMessage(profile, chatId, input)).key;
-    console.log(messageId);
+    const updates = {};
 
-    const msgData = assembleMessage(profile, chatId, input);
+    const messageId = push(ref(database, 'messages')).key;
+
+    updates[`/messages/${messageId}`] = msgData;
+    updates[`/rooms/${chatId}/lastMessage`] = {
+      ...msgData,
+      msgId: messageId,
+    };
 
     setIsLoading(true);
     try {
-      await update(ref(database, `/rooms/${chatId}`), {
-        lastMessage: msgData,
-      });
+      await update(ref(database), updates);
+
       setInput('');
       setIsLoading(false);
     } catch (err) {
-      Alert.error(err.message, 4000);
+      setIsLoading(false);
+      Alert.error(err.message);
     }
   };
 
@@ -64,19 +69,56 @@ const ChatBottom = () => {
     }
   };
 
+  const afterUpload = useCallback(
+    async files => {
+      setIsLoading(true);
+
+      const updates = {};
+
+      files.forEach(file => {
+        const msgData = assembleMessage(profile, window.chatId);
+        msgData.file = file;
+
+        const messageId = push(ref(database, 'messages')).key;
+
+        updates[`/messages/${messageId}`] = msgData;
+      });
+
+      const lastMsgId = Object.keys(updates).pop();
+
+      updates[`/rooms/${window.chatId}/lastMessage`] = {
+        ...updates[lastMsgId],
+        msgId: lastMsgId,
+      };
+
+      try {
+        await update(ref(database), updates);
+        setIsLoading(false);
+      } catch (err) {
+        setIsLoading(false);
+        Alert.error(err.message);
+      }
+    },
+    [profile]
+  );
+
   return (
     <div>
       <InputGroup>
+        <AttachmentBtnModal afterUpload={afterUpload} />
+
         <Input
-          placeholder="Write a new message..."
+          placeholder="Write a new message here..."
           value={input}
           onChange={onInputChange}
           onKeyDown={onKeyDown}
-        ></Input>
+        />
+
         <InputGroup.Button
           color="blue"
           appearance="primary"
           onClick={onSendClick}
+          disabled={isLoading}
         >
           <Icon icon="send" />
         </InputGroup.Button>
@@ -85,4 +127,4 @@ const ChatBottom = () => {
   );
 };
 
-export default ChatBottom;
+export default Bottom;

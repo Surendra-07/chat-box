@@ -1,41 +1,39 @@
 import React from 'react';
-import { Alert, Button, Col, Container, Grid, Icon, Panel, Row } from 'rsuite';
-
 import {
-  signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
+  signInWithPopup,
+  getAdditionalUserInfo,
 } from 'firebase/auth';
+import { Container, Grid, Row, Panel, Col, Button, Icon, Alert } from 'rsuite';
+import { ref, serverTimestamp, set } from 'firebase/database';
 import { auth, database } from '../misc/firebase';
-import { ref, set } from 'firebase/database';
 
-const Signin = () => {
-  const SignInProvider = (auth, provider) => {
+const SignIn = () => {
+  const signInWithProvider = async provider => {
     try {
-      signInWithPopup(auth, provider).then(result => {
-        const user = result.user;
+      const credential = await signInWithPopup(auth, provider);
+      const userMeta = getAdditionalUserInfo(credential);
 
-        Alert.success('Signed in');
-        set(ref(database, `/profiles/${user.uid}`), {
-          username: user.displayName,
-          email: user.email,
-          createdAt: user.metadata.creationTime,
-          avatar: null,
+      if (userMeta.isNewUser) {
+        await set(ref(database, `/profiles/${credential.user.uid}`), {
+          name: credential.user.displayName,
+          createdAt: serverTimestamp(),
         });
-      });
+      }
+
+      Alert.success('Signed in', 4000);
     } catch (err) {
       Alert.error(err.message, 4000);
     }
   };
 
-  const onGoogleSignIn = () => {
-    const provider = new GoogleAuthProvider();
-    SignInProvider(auth, provider);
-  };
   const onFacebookSignIn = () => {
-    const provider = new FacebookAuthProvider();
-    console.log(provider);
-    SignInProvider(auth, provider);
+    signInWithProvider(new FacebookAuthProvider());
+  };
+
+  const onGoogleSignIn = () => {
+    signInWithProvider(new GoogleAuthProvider());
   };
 
   return (
@@ -45,16 +43,18 @@ const Signin = () => {
           <Col xs={24} md={12} mdOffset={6}>
             <Panel>
               <div className="text-center">
-                <h1>Welcome to Chat</h1>
+                <h2>Welcome to Chat-Skoot</h2>
                 <p>Progressive chat platform for neophytes</p>
-                <div className="mt-3">
-                  <Button block color="blue" onClick={onFacebookSignIn}>
-                    <Icon icon="facebook" /> Continue with facebook
-                  </Button>
-                  <Button block color="green" onClick={onGoogleSignIn}>
-                    <Icon icon="google" /> Continue with Google
-                  </Button>
-                </div>
+              </div>
+
+              <div className="mt-3">
+                <Button block color="blue" onClick={onFacebookSignIn}>
+                  <Icon icon="facebook" /> Continue with Facebook
+                </Button>
+
+                <Button block color="green" onClick={onGoogleSignIn}>
+                  <Icon icon="google" /> Continue with Google
+                </Button>
               </div>
             </Panel>
           </Col>
@@ -64,4 +64,4 @@ const Signin = () => {
   );
 };
 
-export default Signin;
+export default SignIn;

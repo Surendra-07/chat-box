@@ -1,43 +1,28 @@
-import { equalTo, onValue, query, ref, update } from 'firebase/database';
+import { ref, update } from 'firebase/database';
 import React from 'react';
-import { Alert, Button, Divider, Drawer } from 'rsuite';
+import { Drawer, Button, Divider, Alert } from 'rsuite';
 import { useProfile } from '../../context/profile.context';
 import EditableInput from '../EditableInput';
 import { database } from '../../misc/firebase';
 import ProviderBlock from './ProviderBlock';
 import AvatarUploadBtn from './AvatarUploadBtn';
+import { getUserUpdates } from '../../misc/helpers';
+
 const Dashboard = ({ onSignOut }) => {
   const { profile } = useProfile();
+
   const onSave = async newData => {
-    const userNickNameRef = ref(database, `/profiles/${profile.uid}`);
     try {
-      if (newData !== '') {
-        update(userNickNameRef, {
-          username: newData,
-        });
+      const updates = await getUserUpdates(
+        profile.uid,
+        'name',
+        newData,
+        database
+      );
 
-        const dref = query(ref(database, '/messages'));
-        onValue(dref, snap => {
-          snap.forEach(msgSnap => {
-            const d = ref(database, `/messages/${msgSnap.key}/author`);
-            update(d, {
-              name: newData,
-            });
-          });
-        });
+      await update(ref(database), updates);
 
-        const drf = query(ref(database, '/rooms'));
-        onValue(drf, snap => {
-          snap.forEach(msgSnap => {
-            const d = ref(database, `/rooms/${msgSnap.key}/lastMessage/author`);
-            update(d, {
-              name: newData,
-            });
-          });
-        });
-
-        Alert.info('User name has been updated', 4000);
-      }
+      Alert.success('Nickname has been updated', 4000);
     } catch (err) {
       Alert.error(err.message, 4000);
     }
@@ -50,15 +35,13 @@ const Dashboard = ({ onSignOut }) => {
       </Drawer.Header>
 
       <Drawer.Body>
-        <h3>Hey, {profile.username}</h3>
+        <h3>Hey, {profile.name}</h3>
         <ProviderBlock />
         <Divider />
-
         <EditableInput
-          initialvalue={profile.username}
-          onSave={onSave}
           name="nickname"
-          placeholder="write your value"
+          initialValue={profile.name}
+          onSave={onSave}
           label={<h6 className="mb-2">Nickname</h6>}
         />
         <AvatarUploadBtn />
@@ -66,7 +49,7 @@ const Dashboard = ({ onSignOut }) => {
 
       <Drawer.Footer>
         <Button block color="red" onClick={onSignOut}>
-          Sign Out
+          Sign out
         </Button>
       </Drawer.Footer>
     </>

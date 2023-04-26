@@ -9,11 +9,12 @@ const PrivateRoute = ({ children, ...routeProps }) => {
   if (isLoading && !profile) {
     return (
       <Container>
-        <Loader center vertical speed="slow" />
+        <Loader center vertical size="md" content="Loading" speed="slow" />
       </Container>
     );
   }
-  if (profile === null && !isLoading) {
+
+  if (!profile && !isLoading) {
     return <Redirect to="/signin" />;
   }
 

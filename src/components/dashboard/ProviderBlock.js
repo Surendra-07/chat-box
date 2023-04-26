@@ -1,14 +1,11 @@
-import { async } from '@firebase/util';
+import React, { useState } from 'react';
+import { Tag, Icon, Button, Alert } from 'rsuite';
 import {
   FacebookAuthProvider,
   GoogleAuthProvider,
   linkWithPopup,
   unlink,
 } from 'firebase/auth';
-
-import React from 'react';
-import { useState } from 'react';
-import { Alert, Button, Icon, Tag } from 'rsuite';
 import { auth } from '../../misc/firebase';
 
 const ProviderBlock = () => {
@@ -30,42 +27,42 @@ const ProviderBlock = () => {
     });
   };
 
-  const unLink = async providerId => {
+  const unlinkProvider = async providerId => {
     try {
       if (auth.currentUser.providerData.length === 1) {
-        throw new Error(`You cannot disconnect from ${providerId}`);
+        throw new Error(`You can not disconnect from ${providerId}`);
       }
-      await unlink(auth.currentUser, providerId);
 
+      await unlink(auth.currentUser, providerId);
       updateIsConnected(providerId, false);
-      Alert.info(`Dissconected from ${providerId} `, 4000);
+      Alert.info(`Disconnected from ${providerId}`, 4000);
     } catch (err) {
       Alert.error(err.message, 4000);
     }
   };
 
   const unlinkFacebook = () => {
-    unLink('facebook.com');
+    unlinkProvider('facebook.com');
   };
   const unlinkGoogle = () => {
-    unLink('google.com');
+    unlinkProvider('google.com');
   };
 
-  const link = provider => {
+  const linkProvider = async provider => {
     try {
-      linkWithPopup(auth.currentUser, provider);
+      await linkWithPopup(auth.currentUser, provider);
       Alert.info(`Linked to ${provider.providerId}`, 4000);
-
       updateIsConnected(provider.providerId, true);
     } catch (err) {
-      Alert.error(err.message, 4000);
+      Alert.error(err.message, 400);
     }
   };
+
   const linkFacebook = () => {
-    link(new FacebookAuthProvider());
+    linkProvider(new FacebookAuthProvider());
   };
   const linkGoogle = () => {
-    link(new GoogleAuthProvider());
+    linkProvider(new GoogleAuthProvider());
   };
 
   return (
@@ -75,7 +72,6 @@ const ProviderBlock = () => {
           <Icon icon="google" /> Connected
         </Tag>
       )}
-
       {isConnected['facebook.com'] && (
         <Tag color="blue" closable onClose={unlinkFacebook}>
           <Icon icon="facebook" /> Connected
@@ -88,9 +84,10 @@ const ProviderBlock = () => {
             <Icon icon="google" /> Link to Google
           </Button>
         )}
+
         {!isConnected['facebook.com'] && (
           <Button block color="blue" onClick={linkFacebook}>
-            <Icon icon="facebook" /> Link to facebook
+            <Icon icon="facebook" /> Link to Facebook
           </Button>
         )}
       </div>

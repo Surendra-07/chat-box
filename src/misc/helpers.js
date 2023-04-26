@@ -1,12 +1,17 @@
-import { equalTo, orderByChild, query, ref } from 'firebase/database';
-import { database } from './firebase';
+import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
 
-export function getNameInitials(name) {
-  const splitName = name.toUpperCase().split(' ');
+export function getNameInitials(username) {
+  const splitName = username.toUpperCase().split(' ');
+
   if (splitName.length > 1) {
     return splitName[0][0] + splitName[1][0];
   }
+
   return splitName[0][0];
+}
+
+export function transformToArr(snapVal) {
+  return snapVal ? Object.keys(snapVal) : [];
 }
 
 export function transformToArrWithId(snapVal) {
@@ -17,24 +22,26 @@ export function transformToArrWithId(snapVal) {
     : [];
 }
 
-export async function getUserUpdate(userId, keyToUpdate, value, db) {
+export async function getUserUpdates(userId, keyToUpdate, value, db) {
   const updates = {};
-  updates[`/profles/${userId}/${keyToUpdate}`] = value;
 
-  const getMsgs = query(
-    ref(database, '/messages'),
-    orderByChild('author/uid'),
-    equalTo(userId)
+  updates[`/profiles/${userId}/${keyToUpdate}`] = value;
+
+  const getMsgs = get(
+    query(ref(db, '/messages'), orderByChild('author/uid'), equalTo(userId))
   );
 
-  const getRooms = query(
-    ref(database, '/rooms'),
-    orderByChild('lastMessage/author/uid'),
-    equalTo(userId)
+  const getRooms = get(
+    query(
+      ref(db, '/rooms'),
+      orderByChild('lastMessage/author/uid'),
+      equalTo(userId)
+    )
   );
+  // Index not defined, add ".indexOn": "author/uid", for path "/messages", to the rules
 
   const [mSnap, rSnap] = await Promise.all([getMsgs, getRooms]);
-  console.log(getMsgs);
+
   mSnap.forEach(msgSnap => {
     updates[`/messages/${msgSnap.key}/author/${keyToUpdate}`] = value;
   });
@@ -45,3 +52,27 @@ export async function getUserUpdate(userId, keyToUpdate, value, db) {
 
   return updates;
 }
+
+export function groupBy(array, groupingKeyFn) {
+  return array.reduce((result, item) => {
+    const groupingKey = groupingKeyFn(item);
+
+    if (!result[groupingKey]) {
+      result[groupingKey] = [];
+    }
+
+    result[groupingKey].push(item);
+
+    return result;
+  }, {});
+}
+
+export const isLocalhost = Boolean(
+  window.location.hostname === 'localhost' ||
+    // [::1] is the IPv6 localhost address.
+    window.location.hostname === '[::1]' ||
+    // 127.0.0.0/8 are considered localhost for IPv4.
+    window.location.hostname.match(
+      /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+    )
+);

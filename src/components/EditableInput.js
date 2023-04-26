@@ -1,44 +1,51 @@
-import React, { useCallback, useState } from 'react';
-import { Alert, Icon, Input, InputGroup } from 'rsuite';
+import React, { useState, useCallback } from 'react';
+import { Input, InputGroup, Icon, Alert } from 'rsuite';
 
 const EditableInput = ({
-  initialvalue,
+  initialValue,
   onSave,
-  placeholder,
-  label,
+  label = null,
+  placeholder = 'Write your value',
+  emptyMsg = 'Input is empty',
+  wrapperClassName = '',
   ...inputProps
 }) => {
-  const [input, setInput] = useState(initialvalue);
+  const [input, setInput] = useState(initialValue);
   const [isEditable, setIsEditable] = useState(false);
+
   const onInputChange = useCallback(value => {
     setInput(value);
   }, []);
 
   const onEditClick = useCallback(() => {
     setIsEditable(p => !p);
-    setInput(initialvalue);
-  }, [initialvalue]);
+    setInput(initialValue);
+  }, [initialValue]);
 
-  const onSaveClick = () => {
+  const onSaveClick = async () => {
     const trimmed = input.trim();
+
     if (trimmed === '') {
-      Alert.info('input is empty', 4000);
+      Alert.info(emptyMsg, 4000);
+      return;
     }
 
-    if (trimmed !== initialvalue) {
-      onSave(trimmed);
+    if (trimmed !== initialValue) {
+      await onSave(trimmed);
     }
+
     setIsEditable(false);
   };
 
   return (
-    <div>
-      {label}{' '}
-      <InputGroup.Button>
+    <div className={wrapperClassName}>
+      {label}
+      <InputGroup>
         <Input
-          value={input}
+          {...inputProps}
           disabled={!isEditable}
           placeholder={placeholder}
+          value={input}
           onChange={onInputChange}
         />
         <InputGroup.Button onClick={onEditClick}>
@@ -49,7 +56,7 @@ const EditableInput = ({
             <Icon icon="check" />
           </InputGroup.Button>
         )}
-      </InputGroup.Button>
+      </InputGroup>
     </div>
   );
 };
